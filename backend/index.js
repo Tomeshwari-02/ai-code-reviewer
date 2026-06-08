@@ -1,36 +1,7 @@
-import express from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
-import { exec } from 'child_process';
-import path from 'path';
-import fs from 'fs';
-import { fileURLToPath } from 'url';
-import { Octokit } from '@octokit/rest';
-import { shouldIgnore } from './utils/reposageIgnore.js';
-
-dotenv.config();
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-const app = express();
-const PORT = process.env.PORT || 5000;
-
-// Enable CORS and JSON parsing
-app.use(cors());
-app.use(express.json());
-
-// Ensure temp_repos folder exists
-const tempReposDir = path.join(__dirname, 'temp_repos');
-if (!fs.existsSync(tempReposDir)) {
-  fs.mkdirSync(tempReposDir, { recursive: true });
-}
-
-// Global variable to cache the active repository context for chat functionality
-let activeRepositoryContext = null;
-
 // 🟢 Helper to recursively read files
 function readFilesRecursively(dir, fileList = [], baseDir = dir) {
+  // Load .reposageignore once per scan
+  const { shouldIgnore } = require('./utils/reposageIgnore.js');
   const files = fs.readdirSync(dir);
   for (const file of files) {
     const filePath = path.join(dir, file);

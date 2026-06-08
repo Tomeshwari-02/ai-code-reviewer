@@ -23,7 +23,7 @@ function parseIgnoreFile(filePath) {
 /**
  * Convert a glob pattern to a RegExp for matching file paths.
  */
-globToRegex(pattern) {
+function globToRegex(pattern) {
   const escaped = pattern
     .replace(/\./g, '\\.')
     .replace(/\*\*/g, '__DOUBLESTAR__')

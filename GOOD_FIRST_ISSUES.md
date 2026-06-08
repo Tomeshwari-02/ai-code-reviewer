@@ -79,6 +79,46 @@ To claim an issue:
 * **Implementation Hints**:
   - Write a helper parsing files in `backend/index.js` to compute counts and return them under a new `metrics` property per analyzed file.
 
+### 9. ⚙️ Backend: Support `.reposageignore` Config File for Excluding Files from Analysis
+* **Description**: Allow users to exclude specific files or directories (e.g., `node_modules/`, `dist/`, tests) from being scanned by the AI and metrics analyzer by reading a `.reposageignore` config file.
+* **Suggested Labels**: `gssoc26`, `good-first-issue`, `backend`, `enhancement`
+* **Implementation Hints**:
+  - Check if a `.reposageignore` file exists in the root of the cloned repository.
+  - Parse the ignore patterns (support `.gitignore`-style wildcards).
+  - Filter the file list before running analysis and metrics computation.
+
+### 10. 🎨 Frontend: Dashboard Audit History with Persistent Recents
+* **Description**: Persist a history of successfully audited repositories in `localStorage` so users can see recent audits and quickly reload cached results without re-cloning.
+* **Suggested Labels**: `gssoc26`, `good-first-issue`, `frontend`, `ux`
+* **Implementation Hints**:
+  - Store metadata of successful analysis runs in `localStorage` under `reposage_audit_history`.
+  - Render a "Recent Audits" section in the sidebar listing the 5 most recent audits.
+  - Clicking a recent audit loads its cached analysis result immediately.
+
+### 11. 📊 Frontend: File Extension & Code Composition Charts
+* **Description**: Create a visual dashboard component showing the distribution of file types across the repository and aggregated code vs. comment vs. empty line ratios.
+* **Suggested Labels**: `gssoc26`, `good-first-issue`, `frontend`
+* **Implementation Hints**:
+  - Aggregate file extension stats from the analysis result object.
+  - Build a horizontal stacked bar using pure CSS (no chart libraries).
+  - Add a "Repository Overview" section at the top of the audit dashboard.
+
+### 12. ⚙️ Backend: Add Export Report to PDF
+* **Description**: Add a `POST /api/reports/pdf` endpoint to generate and download a formatted PDF copy of the full code audit report.
+* **Suggested Labels**: `gssoc26`, `good-first-issue`, `backend`
+* **Implementation Hints**:
+  - Use `pdfkit` or `pdf-creator-node` to generate the PDF.
+  - Include repo name, date, grade, findings, and metrics in the document.
+  - Add an "Export PDF" button in the frontend navbar.
+
+### 13. 🎨 Frontend: Settings Modal for AI Model Parameter Controls
+* **Description**: Add a settings gear button in the header that opens a modal to customize AI analysis parameters (temperature, max tokens, custom system prompt).
+* **Suggested Labels**: `gssoc26`, `good-first-issue`, `frontend`, `backend`
+* **Implementation Hints**:
+  - Create a modal with sliders/inputs for temperature, max tokens, and a system prompt textarea.
+  - Persist settings in `localStorage` under `reposage_ai_settings`.
+  - Pass settings in the body of the `POST /api/analyze` request.
+
 ---
 
 Let's make RepoSage an amazing open-source experience together! 🚀🔥

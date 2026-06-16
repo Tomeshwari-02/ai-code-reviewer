@@ -236,7 +236,11 @@ function MermaidViewer({ chart, repoName }: MermaidViewerProps) {
         dangerouslySetInnerHTML={{
           __html: DOMPurify.sanitize(
             svg ||
-            '<span style="color:#9ca3af;font-size:12px;">Generating visual flowchart...</span>'
+            '<span style="color:#9ca3af;font-size:12px;">Generating visual flowchart...</span>',
+            {
+              ALLOWED_TAGS: ['svg', 'g', 'path', 'text', 'tspan', 'rect', 'circle', 'line', 'polygon', 'polyline', 'style', 'marker', 'defs', 'span', 'br'],
+              ALLOWED_ATTR: ['id', 'class', 'style', 'd', 'x', 'y', 'width', 'height', 'rx', 'ry', 'fill', 'stroke', 'stroke-width', 'stroke-dasharray', 'viewBox', 'xmlns', 'marker-end', 'marker-start', 'transform', 'text-anchor', 'font-size', 'font-family', 'color']
+            }
           ),
         }}
       />
@@ -607,7 +611,7 @@ export default function App() {
       `*Generated automatically by **RepoSage AI Copilot**.*`;
 
     const labels = isGssocLabelingEnabled
-      ? ["gssoc26", "good-first-issue", category]
+      ? ["gssoc26", category]
       : [category];
 
     try {
@@ -615,7 +619,7 @@ export default function App() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-api-key": import.meta.env.VITE_REPOSAGE_API_KEY,
+          "x-api-key": import.meta.env.VITE_REPOSAGE_API_KEY
         },
         body: JSON.stringify({
           repoUrl,
@@ -669,7 +673,7 @@ export default function App() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-api-key": import.meta.env.VITE_REPOSAGE_API_KEY,
+          "x-api-key": import.meta.env.VITE_REPOSAGE_API_KEY
         },
         body: JSON.stringify({
           message: userMessage,
@@ -881,7 +885,7 @@ export default function App() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-api-key": import.meta.env.VITE_REPOSAGE_API_KEY,
+          "x-api-key": import.meta.env.VITE_REPOSAGE_API_KEY
         },
         body: JSON.stringify({
           repoUrl,
@@ -891,6 +895,7 @@ export default function App() {
           temperature: aiSettings.temperature ?? 0.7,
           maxTokens: aiSettings.maxTokens ?? 2048,
           systemPrompt: aiSettings.systemPrompt ?? "",
+          batchSize: aiSettings.batchSize ?? 5,
         }),
       });
 
@@ -958,7 +963,10 @@ export default function App() {
       try {
         const response = await fetch(`${API_BASE_URL}/api/analyze`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json",
+            "x-api-key": import.meta.env.VITE_REPOSAGE_API_KEY
+          },
           signal: controller.signal,
           body: JSON.stringify({
             repoUrl: repo.url,
@@ -968,6 +976,7 @@ export default function App() {
             temperature: aiSettings.temperature ?? 0.7,
             maxTokens: aiSettings.maxTokens ?? 2048,
             systemPrompt: aiSettings.systemPrompt ?? "",
+            batchSize: aiSettings.batchSize ?? 5,
           }),
         });
 
@@ -1162,7 +1171,7 @@ export default function App() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-api-key": import.meta.env.VITE_REPOSAGE_API_KEY,
+          "x-api-key": import.meta.env.VITE_REPOSAGE_API_KEY
         },
         body: JSON.stringify({
           repoName: result.repoName,

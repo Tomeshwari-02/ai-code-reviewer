@@ -60,6 +60,33 @@ try {
 
 // API Endpoint Configuration
 const API_BASE_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
+// Maximum number of audit history entries kept in localStorage.
+const MAX_HISTORY_ENTRIES = 20;
+
+/**
+ * Safely writes a value to localStorage.
+ * Returns true on success, false when the browser's storage quota is exceeded
+ * or any other write error occurs.
+ * Callers should show the user a warning when false is returned.
+ */
+function safeSetLocalStorage(key: string, value: string): boolean {
+  try {
+    localStorage.setItem(key, value);
+    return true;
+  } catch (e) {
+    if (e instanceof DOMException && (
+      e.name === 'QuotaExceededError' ||
+      // Firefox uses a different name
+      e.name === 'NS_ERROR_DOM_QUOTA_REACHED'
+    )) {
+      console.warn(`localStorage quota exceeded when writing "${key}".`);
+    } else {
+      console.warn(`localStorage write failed for "${key}":`, e);
+    }
+    return false;
+  }
+}
 // Define Types
 interface ReviewItem {
   type: string;
@@ -99,7 +126,21 @@ interface AuditHistoryEntry {
   auditedAt: string;
   totalFindings: number;
   overallGrade: string;
-  response: BackendResponse;
+  // Only summary counts are persisted to keep localStorage usage small.
+  // The full fileReviews, generatedReadme, and mermaidDiagram are omitted
+  // from stored entries to avoid hitting the browser's storage quota.
+  response: {
+    success: boolean;
+    repoName: string;
+    filesReviewedCount: number;
+    sessionId?: string;
+    analysis: {
+      fileReviews: Record<string, FileReview>;
+      generatedReadme: string;
+      mermaidDiagram?: string;
+      metrics?: Record<string, any>;
+    };
+  };
 }
 
 interface MermaidViewerProps {
@@ -406,7 +447,7 @@ export default function App() {
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem("reposage_theme", theme);
+    safeSetLocalStorage("reposage_theme", theme);
   }, [theme]);
 
   // Input State
@@ -506,14 +547,14 @@ export default function App() {
   });
 
   useEffect(() => {
-    localStorage.setItem('reposage_batch_results', JSON.stringify(queuedRepos));
+    safeSetLocalStorage('reposage_batch_results', JSON.stringify(queuedRepos));
     // Also save under requested key just in case testing relies on it
-    localStorage.setItem('eposage_batch_results', JSON.stringify(queuedRepos));
+    safeSetLocalStorage('eposage_batch_results', JSON.stringify(queuedRepos));
   }, [queuedRepos]);
 
   useEffect(() => {
     if (activeRepoId) {
-      localStorage.setItem('reposage_active_repo_id', activeRepoId);
+      safeSetLocalStorage('reposage_active_repo_id', activeRepoId);
     } else {
       localStorage.removeItem('reposage_active_repo_id');
     }
@@ -896,7 +937,7 @@ export default function App() {
         [issueKey]: name,
       };
       setAssignedContributors(updated);
-      localStorage.setItem(
+      safeSetLocalStorage(
         "reposage_contributor_assignments",
         JSON.stringify(updated),
       );
@@ -919,7 +960,7 @@ export default function App() {
         "complexity-metrics": "Unassigned",
       };
       setAssignedContributors(initial);
-      localStorage.setItem(
+      safeSetLocalStorage(
         "reposage_contributor_assignments",
         JSON.stringify(initial),
       );
@@ -971,8 +1012,11 @@ export default function App() {
       const updatedHistory = [
         entry,
         ...prev.filter(item => item.repoUrl !== repoUrl)
-      ].slice(0, 10);
-      localStorage.setItem('reposage_audit_history', JSON.stringify(updatedHistory));
+      ].slice(0, MAX_HISTORY_ENTRIES);
+      const saved = safeSetLocalStorage('reposage_audit_history', JSON.stringify(updatedHistory));
+      if (!saved) {
+        addToast('Storage quota exceeded — audit history could not be saved. Consider clearing old entries.', 'warning');
+      }
       return updatedHistory;
     });
   };

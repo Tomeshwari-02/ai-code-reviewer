@@ -52,7 +52,15 @@ test('ensureConnection returns false after retries when DB is unavailable', asyn
   connectCallCount = 0;
   connectShouldSucceed = false;
 
-  const result = await ensureConnection();
+  const origSetTimeout = global.setTimeout;
+  global.setTimeout = (fn, ms) => origSetTimeout(fn, 1); // speed up retries
+
+  let result;
+  try {
+    result = await ensureConnection();
+  } finally {
+    global.setTimeout = origSetTimeout;
+  }
 
   assert.equal(typeof result, 'boolean');
   assert.equal(result, false);

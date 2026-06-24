@@ -94,6 +94,7 @@ const chatLimiter = rateLimit({
 
 // Capture raw body for webhook signature verification before JSON parsing
 app.use(express.json({
+  limit: process.env.JSON_BODY_LIMIT || '5mb',
   verify: (req, _res, buf) => {
     req.rawBody = buf;
   }

@@ -850,6 +850,7 @@ export default function Dashboard() {
   const loadAuditFromHistory = (entry: AuditHistoryEntry) => {
     setRepoUrl(entry.repoUrl);
     setAnalysisResult(entry.response);
+    setSessionId(entry.response.sessionId ?? null);
     setApiError(null);
     setIsLoading(false);
     setActiveDashboardView('audit');

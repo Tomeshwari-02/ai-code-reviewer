@@ -351,14 +351,16 @@ app.post('/api/analyze', requireApiKey, analyzeLimiter, async (req, res) => {
 
       // 3. Persist the repository context for chat in MongoDB so it survives
       //    server restarts and works across multiple backend instances.
-      const sessionId = crypto.randomUUID();
+      let sessionId = null;
       try {
+        const candidateSessionId = crypto.randomUUID();
         await Session.create({
-          sessionId,
+          sessionId: candidateSessionId,
           repoUrl,
           repoName,
           files,
         });
+        sessionId = candidateSessionId;
       } catch (sessionErr) {
         console.warn('⚠️ Failed to persist session context:', sessionErr.message);
       }
@@ -405,7 +407,8 @@ app.post('/api/analyze', requireApiKey, analyzeLimiter, async (req, res) => {
         repoName,
         filesReviewedCount: files.length,
         analysis: reviewResult,
-        sessionId
+        sessionId,
+        chatAvailable: Boolean(sessionId)
       });
 
     } catch (err) {

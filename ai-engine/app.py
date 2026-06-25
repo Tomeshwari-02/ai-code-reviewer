@@ -641,8 +641,8 @@ If no issues are found, reply with: {{ "reviews": [] }}"""
 
 class SplitRequest(BaseModel):
     files: List[FileItem]
-    chunk_size: Optional[int] = None
-    chunk_overlap: Optional[int] = None
+    chunk_size: Optional[int] = Field(None, ge=1, le=100000)
+    chunk_overlap: Optional[int] = Field(None, ge=0, le=99999)
     repo_url: Optional[str] = None
 
 
@@ -666,6 +666,16 @@ class RagQueryResponse(BaseModel):
 @app.post("/api/rag/split", response_model=SplitResponse)
 async def split_files_for_rag(request: SplitRequest):
     from text_splitter import split_files as do_split
+
+    if (
+        request.chunk_size is not None
+        and request.chunk_overlap is not None
+        and request.chunk_overlap >= request.chunk_size
+    ):
+        raise HTTPException(
+            status_code=422,
+            detail="chunk_overlap must be smaller than chunk_size.",
+        )
 
     file_dicts = [{"name": f.name, "content": f.content} for f in request.files]
     chunks = do_split(

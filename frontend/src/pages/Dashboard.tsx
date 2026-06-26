@@ -3207,7 +3207,7 @@ export default function Dashboard() {
                                       )}
                                     </button>
                                   )}
-                                </div>
+                                </div>}
                               </div>
                             );
                           })
@@ -3588,12 +3588,9 @@ export default function Dashboard() {
                                 💡 {queryText}
                               </button>
                             ))}
-                                  </div>}
-                                </div>
-                              </div>
-                            );
-                          })
-                        ) : (
+                          </div>
+                        </div>
+                      ) : (
                         chatHistory.map((msg, index) => (
                           <div
                             key={index}

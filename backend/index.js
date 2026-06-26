@@ -1108,7 +1108,7 @@ app.get('/api/analytics/trends', requireApiKey, async (req, res) => {
 
     const matchFilter = {
       analyzedAt: { $gte: thirtyDaysAgo },
-    } as any;
+    };
 
     if (req.query.sessionId) {
       matchFilter.sessionId = req.query.sessionId;

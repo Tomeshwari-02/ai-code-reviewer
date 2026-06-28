@@ -27,7 +27,12 @@ class ReviewQueue {
     const prev = this._locks.get(key) || Promise.resolve();
     const next = prev.then(async () => {
       const queue = this._queues.get(key);
-      if (!queue || queue.length === 0) return;
+      if (!queue || queue.length === 0) {
+        if (this._locks.get(key) === next) {
+          this._locks.delete(key);
+        }
+        return;
+      }
       while (queue.length > 0) {
         const item = queue.shift();
         try {
@@ -36,8 +41,10 @@ class ReviewQueue {
           console.error(`Review processing failed for ${key}:`, err);
         }
       }
+      if (this._locks.get(key) === next) {
+        this._locks.delete(key);
+      }
       this._queues.delete(key);
-      this._locks.delete(key);
     });
     this._locks.set(key, next.catch(err => {
       console.error(`ReviewQueue processing error for "${key}":`, err);
@@ -55,7 +62,9 @@ class ReviewQueue {
       try {
         return await fn();
       } finally {
-        this._locks.delete(key);
+        if (this._locks.get(key) === next) {
+          this._locks.delete(key);
+        }
       }
     });
     this._locks.set(key, next.catch(err => {

@@ -29,6 +29,7 @@ import AnalysisCache from './utils/analysisCache.js';
 import Analytics from './models/Analytics.js';
 import Session, { estimateSessionSize } from './models/Session.js';
 import { connectDatabase, ensureConnection, closeDatabase } from './config/db.js';
+import { loadConfigFile, applySeverityConfig, filterByMinimumSeverity } from './utils/severityConfig.js';
 
 dotenv.config();
 
@@ -386,7 +387,7 @@ function requireJsonContentType(req, res, next) {
 // 🟢 Route: GitHub Import & AI Review
 app.post('/api/analyze', requireApiKey, requireJsonContentType, analyzeLimiter, async (req, res) => {
   let { repoUrl, company = 'General', language = 'English', model = 'llama-3.3-70b-versatile',temperature = 0.7,
-     maxTokens = 2048, systemPrompt = '', batchSize = 5
+     maxTokens = 2048, systemPrompt = '', batchSize = 5, loadConfig = false, failOn = null
    } = req.body;
 
   // Enforce boundary limits for batchSize to prevent downstream parsing crashes
@@ -620,6 +621,68 @@ app.post('/api/analyze', requireApiKey, requireJsonContentType, analyzeLimiter, 
         }
       }
 
+      // 4.5. Apply severity configuration if requested
+      let configApplied = false;
+      let configStatus = null;
+      if (loadConfig) {
+        try {
+          const config = loadConfigFile(clonePath);
+          configStatus = {
+            loaded: true,
+            suppressedRules: config.suppress?.length || 0,
+            severityMappings: config.severity,
+          };
+
+          if (reviewResult && reviewResult.fileReviews) {
+            for (const filePath of Object.keys(reviewResult.fileReviews)) {
+              const review = reviewResult.fileReviews[filePath];
+              const allIssues = [
+                ...(review.bugs || []),
+                ...(review.security || []),
+                ...(review.optimization || []),
+                ...(review.styling || []),
+              ];
+
+              const processedIssues = applySeverityConfig(allIssues, config);
+
+              review.bugs = processedIssues.filter(i => i.severity === 'error');
+              review.security = [];
+              review.optimization = processedIssues.filter(i => i.severity === 'warning');
+              review.styling = processedIssues.filter(i => i.severity === 'info');
+            }
+          }
+
+          if (failOn) {
+            const filteredResult = filterByMinimumSeverity(
+              Object.values(reviewResult.fileReviews || {}).flatMap(r => [
+                ...(r.bugs || []),
+                ...(r.security || []),
+                ...(r.optimization || []),
+                ...(r.styling || []),
+              ]),
+              failOn
+            );
+
+            if (filteredResult.length > 0) {
+              await deleteFolderRecursive(clonePath);
+              return res.status(422).json({
+                success: false,
+                failOn,
+                failingFindingsCount: filteredResult.length,
+                message: `Analysis failed: ${filteredResult.length} finding(s) at severity level "${failOn}" or higher`,
+                configStatus,
+              });
+            }
+          }
+
+          configApplied = true;
+          console.log(`✅ Severity config applied: ${config.suppress?.length || 0} rules suppressed`);
+        } catch (configErr) {
+          console.warn(`⚠️ Failed to load severity config: ${configErr.message}`);
+          configStatus = { loaded: false, error: configErr.message };
+        }
+      }
+
       // 5. Clean up folder
       await deleteFolderRecursive(clonePath);
       
@@ -632,6 +695,7 @@ app.post('/api/analyze', requireApiKey, requireJsonContentType, analyzeLimiter, 
         sessionId,
         chatAvailable: sessionPersisted,
         sessionPersisted,
+        ...(configStatus ? { config: configStatus } : {}),
         ...(fileWarnings.length > 0 ? { warnings: fileWarnings } : {})
       });
 

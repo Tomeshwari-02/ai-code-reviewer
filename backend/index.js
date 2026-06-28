@@ -857,15 +857,24 @@ async function runWebhookReview(owner, repo, pullNumber, headSha) {
   const octokit = new Octokit({ auth: token });
   console.log(`🔍 Fetching diff for PR #${pullNumber}...`);
 
-  // 1. Fetch Diff from GitHub, pinned to the specific commit that triggered the event
+  const { data: pullRequest } = await octokit.rest.pulls.get({
+    owner,
+    repo,
+    pull_number: pullNumber
+  });
+  if (headSha && pullRequest.head.sha !== headSha) {
+    console.log(`⏭️ Skipping stale review ${headSha.substring(0, 7)}; current head is ${pullRequest.head.sha.substring(0, 7)}.`);
+    return;
+  }
+
+  // 1. Fetch the diff for the verified current pull-request head.
   const { data: diff } = await octokit.rest.pulls.get({
     owner,
     repo,
     pull_number: pullNumber,
     mediaType: {
       format: 'diff'
-    },
-    ...(headSha && { commit_id: headSha })
+    }
   });
 
   if (!diff) {

@@ -68,7 +68,7 @@ export async function getFolderSize(dirPath) {
       }
     }
   } catch (err) {
-    // Ignore errors
+    console.warn(`getFolderSize: could not read path ${dirPath}: ${err.message}`);
   }
   return size;
 }

@@ -72,6 +72,10 @@ const analyticsSchema = new mongoose.Schema({
     default: [],
   },
 },
+dependencyReport: {
+  type: Array,
+  default: [],
+},
   grade: {
     type: String,
     default: "A",
@@ -97,6 +101,7 @@ commitHash: {
   analyzedAt: {
     type: Date,
     default: Date.now,
+    expires: 2592000,
   },
 });
 

@@ -22,7 +22,6 @@ import {
   Code2,
   MessageSquare,
   Send,
-  Settings,
   Clock,
   Trash2,
   Search,
@@ -98,9 +97,21 @@ interface AnalysisData {
   generatedReadme: string;
   mermaidDiagram?: string;
   metrics?: Record<string, any>;
+  _mock?: boolean;
 }
 
 export interface BackendResponse {
+  dependencyReport?: {
+  dependencies: {
+    name: string;
+    currentVersion: string;
+    latestVersion: string;
+    risk: string;
+    deprecated: boolean;
+    vulnerable: boolean;
+    recommendation: string;
+  }[];
+};
   prSummary?: {
   overallPurpose: string;
   filesChanged: number;
@@ -553,23 +564,6 @@ export default function Dashboard() {
       `\`\`\`\n${item.suggestion}\n\`\`\`\n\n` +
       `---\n` +
       `*Generated automatically by **RepoSage AI Copilot**.*`;
-
-    <button
-      onClick={() => setShowSettings(true)}
-      style={{
-        background: "rgba(255,255,255,0.05)",
-        border: "1px solid var(--border-color)",
-        borderRadius: "6px",
-        padding: "6px 10px",
-        cursor: "pointer",
-        color: "var(--text-color)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-      }}
-    >
-      <Settings size={15} />
-    </button>;
 
     const gssoLabel = localStorage.getItem("reposage_gssoc_label") || "gssoc26";
     const labels = isGssocLabelingEnabled
@@ -1813,7 +1807,7 @@ export default function Dashboard() {
                 boxSizing: "border-box",
               }}
             >
-              {analysisResult._mock && (
+              {(analysisResult._mock || analysisResult.analysis?._mock) && (
                 <div
                   style={{
                     background: "rgba(251,191,36,0.12)",
@@ -1993,6 +1987,60 @@ export default function Dashboard() {
       <li key={i}>{item}</li>
     ))}
   </ul>
+</div>
+<div
+  className="glass-panel"
+  style={{ padding: "20px", marginBottom: "16px" }}
+>
+  <h2>📦 Dependency Risk Analyzer</h2>
+
+  {(analysisResult.dependencyReport?.dependencies || []).length === 0 ? (
+    <p style={{ color: "#9ca3af" }}>
+      No dependency information available.
+    </p>
+  ) : (
+    <table
+      style={{
+        width: "100%",
+        borderCollapse: "collapse",
+        marginTop: "15px",
+      }}
+    >
+      <thead>
+        <tr>
+          <th>Package</th>
+          <th>Current</th>
+          <th>Latest</th>
+          <th>Risk</th>
+          <th>Status</th>
+          <th>Recommendation</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {analysisResult.dependencyReport.dependencies.map(
+          (dep, index) => (
+            <tr key={index}>
+              <td>{dep.name}</td>
+              <td>{dep.currentVersion}</td>
+              <td>{dep.latestVersion}</td>
+              <td>{dep.risk}</td>
+
+              <td>
+                {dep.vulnerable
+                  ? "⚠️ Vulnerable"
+                  : dep.deprecated
+                  ? "Deprecated"
+                  : "Safe"}
+              </td>
+
+              <td>{dep.recommendation}</td>
+            </tr>
+          )
+        )}
+      </tbody>
+    </table>
+  )}
 </div>
               {/* Dashboard View Selection Tabs & Export Controls */}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "10px", flexWrap: "wrap", width: "100%" }}>
@@ -3333,7 +3381,7 @@ export default function Dashboard() {
   </code>
 </div>
                                 </div>
-                                {!analysisResult?._mock && <div
+                                {!(analysisResult?._mock || analysisResult?.analysis?._mock) && <div
                                   style={{
                                     marginTop: "10px",
                                     display: "flex",
@@ -3625,9 +3673,11 @@ export default function Dashboard() {
                             flexDirection: "column",
                           }}
                         >
-                          {renderMarkdown(
-                            analysisResult.analysis.generatedReadme,
-                          )}
+                          <MarkdownErrorBoundary>
+                            {renderMarkdown(
+                              analysisResult.analysis.generatedReadme,
+                            )}
+                          </MarkdownErrorBoundary>
                         </div>
                       )}
                     </div>
@@ -3855,7 +3905,7 @@ export default function Dashboard() {
                                     : "inherit",
                               }}
                             >
-                              {msg.content}
+                              {renderMarkdown(msg.content)}
                             </div>
                             {msg.role === "assistant" && msg.sources && msg.sources.length > 0 && (
                               <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginTop: "6px", borderTop: "1px solid rgba(255,255,255,0.06)", paddingTop: "6px" }}>

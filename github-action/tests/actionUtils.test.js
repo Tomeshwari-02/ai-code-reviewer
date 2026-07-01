@@ -89,19 +89,25 @@ test('cleanAndParseJSON handles single backtick fences', () => {
   assert.deepStrictEqual(result, { x: 1 });
 });
 
-test('cleanAndParseJSON returns {reviews: []} for invalid JSON without throwing', () => {
-  const result = cleanAndParseJSON('not valid json at all');
-  assert.deepStrictEqual(result, { reviews: [] });
+test('cleanAndParseJSON throws for invalid JSON', () => {
+  assert.throws(
+    () => cleanAndParseJSON('not valid json at all'),
+    SyntaxError,
+  );
 });
 
-test('cleanAndParseJSON returns {reviews: []} for empty string', () => {
-  const result = cleanAndParseJSON('');
-  assert.deepStrictEqual(result, { reviews: [] });
+test('cleanAndParseJSON throws for empty string', () => {
+  assert.throws(
+    () => cleanAndParseJSON(''),
+    SyntaxError,
+  );
 });
 
 test('cleanAndParseJSON handles whitespace-only input', () => {
-  const result = cleanAndParseJSON('   \n\n  ');
-  assert.deepStrictEqual(result, { reviews: [] });
+  assert.throws(
+    () => cleanAndParseJSON('   \n\n  '),
+    SyntaxError,
+  );
 });
 
 test('cleanAndParseJSON handles null-like plain text', () => {

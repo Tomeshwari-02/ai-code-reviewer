@@ -38,20 +38,23 @@ function safeEqual(left, right) {
   return leftBuffer.length === rightBuffer.length && crypto.timingSafeEqual(leftBuffer, rightBuffer);
 }
 
-function hasValidSessionCookie(req, secret) {
+function getValidSessionCookiePayload(req, secret) {
   const cookieValue = getCookie(req, SESSION_COOKIE_NAME);
-  if (!cookieValue) return false;
+  if (!cookieValue) return null;
 
   const [payload, signature] = cookieValue.split('.');
   if (!payload || !signature || !safeEqual(signature, signValue(payload, secret))) {
-    return false;
+    return null;
   }
 
   try {
     const session = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8'));
-    return Number.isFinite(session.exp) && session.exp > Date.now();
+    if (Number.isFinite(session.exp) && session.exp > Date.now() && session.uid) {
+      return session;
+    }
+    return null;
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -80,14 +83,15 @@ export const requireApiKey = (req, res, next) => {
 
   const sessionSecret = getSessionSecret();
 
-  if (hasValidSessionCookie(req, sessionSecret)) {
-    req.clientId = crypto.createHash('sha256').update(validKey).digest('hex');
+  const session = getValidSessionCookiePayload(req, sessionSecret);
+  if (session) {
+    req.clientId = crypto.createHash('sha256').update(`session:${session.uid}`).digest('hex');
     next();
     return;
   }
 
   if (providedKey && safeEqual(providedKey, validKey)) {
-    req.clientId = crypto.createHash('sha256').update(validKey).digest('hex');
+    req.clientId = crypto.createHash('sha256').update(`api-key:${validKey}`).digest('hex');
     next();
     return;
   }
